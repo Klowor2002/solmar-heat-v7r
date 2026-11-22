@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solmar Heat: Neon Run</title>
+<style>
+  html, body { margin:0; padding:0; height:100%; overflow:hidden; background:#0b0e1a;
+    font-family:"Segoe UI", system-ui, -apple-system, sans-serif; color:#f2f4ff;
+    -webkit-user-select:none; user-select:none; }
+  #app { position:fixed; inset:0; }
+  canvas.webgl { display:block; width:100%; height:100%; }
+
+  /* ---------- HUD ---------- */
+  #hud { position:fixed; inset:0; pointer-events:none; display:none; }
+  #hud.on { display:block; }
+  .panel { background:rgba(8,10,24,.55); border:1px solid rgba(120,200,255,.25);
+    border-radius:10px; padding:8px 12px; backdrop-filter:blur(3px); }
+  #stats { position:absolute; top:14px; left:14px; min-width:170px; }
+  #money { font-size:22px; font-weight:700; color:#7dff9a; letter-spacing:.5px; }
+  #substats { font-size:12px; color:#bcd2ff; margin-top:2px; }
+  .bar { height:8px; border-radius:4px; background:rgba(255,255,255,.14); margin-top:6px; overflow:hidden; }
+  .bar > div { height:100%; border-radius:4px; }
+  #healthfill { background:linear-gradient(90deg,#ff5d73,#ffb35d); width:100%; }
+  #wanted { position:absolute; top:14px; right:14px; text-align:right; }
+  #stars { font-size:26px; letter-spacing:3px; color:#ffd94d; text-shadow:0 0 8px rgba(255,180,0,.7); }
+  #stars .off { color:rgba(255,255,255,.18); text-shadow:none; }
+  #clock { font-size:13px; color:#bcd2ff; margin-top:2px; }
+  #objective { position:absolute; left:50%; bottom:118px; transform:translateX(-50%);
+    max-width:640px; text-align:center; font-size:16px; }
+  #objective .obj-title { color:#ffd94d; font-weight:700; text-transform:uppercase; letter-spacing:1px; font-size:13px; }
+  #objective .obj-text { margin-top:2px; text-shadow:0 1px 3px #000; }
+  #toast { position:absolute; left:50%; top:84px; transform:translateX(-50%); text-align:center;
+    font-size:20px; font-weight:700; color:#fff; text-shadow:0 2px 6px #000; opacity:0; transition:opacity .3s; }
+  #toast small { display:block; font-size:13px; font-weight:400; color:#ffd94d; }
+  #minimap-wrap { position:absolute; left:14px; bottom:14px; width:184px; height:184px;
+    border-radius:50%; overflow:hidden; border:2px solid rgba(120,200,255,.35);
+    background:rgba(6,10,20,.72); }
+  #minimap { width:184px; height:184px; }
+  #speedo { position:absolute; right:18px; bottom:16px; text-align:right; }
+  #speed { font-size:34px; font-weight:800; color:#fff; text-shadow:0 2px 6px #000; }
+  #speed small { font-size:13px; color:#bcd2ff; font-weight:400; }
+  #vehicle-name { font-size:13px; color:#ffd94d; }
+  #crosshair { position:absolute; left:50%; top:50%; width:6px; height:6px; margin:-3px 0 0 -3px;
+    border-radius:50%; background:rgba(255,255,255,.9); box-shadow:0 0 6px #000; display:none; }
+  #busted-meter { position:absolute; left:50%; top:56%; transform:translateX(-50%); width:240px; display:none; }
+  #busted-meter .bar > div { background:#ff5d73; width:0%; }
+  #busted-label { text-align:center; font-size:12px; letter-spacing:2px; color:#ff8fa0; }
+  #prompt { position:absolute; left:50%; bottom:64px; transform:translateX(-50%); font-size:14px;
+    color:#fff; background:rgba(8,10,24,.6); padding:6px 14px; border-radius:16px; display:none; }
+  #prompt b { color:#ffd94d; border:1px solid #ffd94d; border-radius:4px; padding:0 5px; margin-right:6px; }
+
+  /* ---------- Title / menus ---------- */
+  #title { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; background:radial-gradient(ellipse at 50% 65%, rgba(255,94,160,.20), transparent 60%),
+    linear-gradient(180deg, rgba(5,6,18,.25) 0%, rgba(5,6,18,.78) 78%); z-index:5; }
+  #title h1 { font-size:64px; margin:0; letter-spacing:2px; font-weight:900; font-style:italic;
+    background:linear-gradient(92deg,#ff5ea8 5%,#ffb35d 45%,#5ee7ff 95%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 4px 14px rgba(255,94,168,.35)); }
+  #title h2 { margin:2px 0 22px; font-size:17px; letter-spacing:6px; color:#cfe4ff; font-weight:400; }
+  .tbtn { pointer-events:auto; cursor:pointer; margin:5px; padding:12px 42px; font-size:17px; font-weight:700;
+    letter-spacing:1px; color:#081018; background:linear-gradient(90deg,#ffd94d,#ff9d5c); border:0; border-radius:24px;
+    box-shadow:0 4px 18px rgba(255,157,92,.4); }
+  .tbtn:hover { filter:brightness(1.1); }
+  .tbtn.ghost { background:rgba(255,255,255,.1); color:#dfe9ff; box-shadow:none; border:1px solid rgba(255,255,255,.35); }
+  #title .fine { margin-top:20px; font-size:12px; color:#8fa8d8; max-width:520px; text-align:center; line-height:1.5; }
+  #banner { position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:6;
+    background:rgba(4,4,12,.45); pointer-events:none; }
+  #banner .card { text-align:center; }
+  #banner h1 { font-size:52px; margin:0; letter-spacing:3px; color:#ffd94d; text-shadow:0 4px 18px #000; }
+  #banner p { font-size:17px; color:#eaf2ff; text-shadow:0 2px 6px #000; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.min.js" } }
+</script>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="hud">
+  <div id="stats" class="panel">
+    <div id="money">$0</div>
+    <div id="substats">SOLMAR CITY</div>
+    <div class="bar"><div id="healthfill"></div></div>
+  </div>
+  <div id="wanted" class="panel">
+    <div id="stars"></div>
+    <div id="clock">18:00</div>
+  </div>
+  <div id="objective" class="panel"><div class="obj-title"></div><div class="obj-text"></div></div>
+  <div id="toast"></div>
+  <div id="minimap-wrap"><canvas id="minimap" width="184" height="184"></canvas></div>
+  <div id="speedo"><div id="vehicle-name"></div><div id="speed">0<small> mph</small></div></div>
+  <div id="crosshair"></div>
+  <div id="busted-meter"><div id="busted-label">BUSTED</div><div class="bar"><div id="bustedfill"></div></div></div>
+  <div id="prompt"></div>
+</div>
+
+<div id="banner"><div class="card"><h1 id="banner-title"></h1><p id="banner-sub"></p></div></div>
+
+<div id="title">
+  <h1>SOLMAR HEAT</h1>
+  <h2>N E O N &nbsp; R U N</h2>
+  <button class="tbtn" id="btn-new">NEW GAME</button>
+  <button class="tbtn ghost" id="btn-continue" style="display:none">CONTINUE</button>
+  <button class="tbtn ghost" id="btn-how">HOW TO PLAY</button>
+  <div class="fine" id="how-text" style="display:none">
+    WASD drive / walk &nbsp;·&nbsp; E enter &amp; exit cars &nbsp;·&nbsp; Mouse aim, click to shoot on foot<br>
+    Shift boost &nbsp;·&nbsp; Space handbrake &nbsp;·&nbsp; Follow the gold beam: story jobs, fares, fences and races.<br>
+    Steal cars, run jobs, dodge the heat. Fence stolen rides at the Chop Shop. Find all 12 gold tokens.
+  </div>
+  <div class="fine">A make.fun gta6-01 entry — an original neon coastal city of crime, built in the browser.</div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
