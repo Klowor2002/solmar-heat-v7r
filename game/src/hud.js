@@ -30,6 +30,8 @@ export class Hud {
     this.map = $('minimap').getContext('2d');
     this.toastTimer = 0;
     this.lastStars = -1;
+    this.lastMoneyText = null;   // textContent writes are layout work —
+    this.lastClockText = null;   // only pay for them when text changes
   }
 
   show() { this.root.classList.add('on'); }
@@ -71,7 +73,11 @@ export class Hud {
       this.toastTimer -= dt;
       if (this.toastTimer <= 0) this.toast.style.opacity = 0;
     }
-    this.money.textContent = '$' + Math.max(0, Math.floor(s.money)).toLocaleString('en-US');
+    const moneyText = '$' + Math.max(0, Math.floor(s.money)).toLocaleString('en-US');
+    if (moneyText !== this.lastMoneyText) {
+      this.lastMoneyText = moneyText;
+      this.money.textContent = moneyText;
+    }
     this.sub.textContent = s.zone || 'SOLMAR CITY';
     this.health.style.width = Math.max(0, s.health) + '%';
     if (s.wanted !== this.lastStars) {
@@ -87,7 +93,11 @@ export class Hud {
     const mins = Math.floor(s.clockMinutes) % (24 * 60);
     const hh = String(Math.floor(mins / 60)).padStart(2, '0');
     const mm = String(mins % 60).padStart(2, '0');
-    this.clock.textContent = `${hh}:${mm}`;
+    const clockText = `${hh}:${mm}`;
+    if (clockText !== this.lastClockText) {
+      this.lastClockText = clockText;
+      this.clock.textContent = clockText;
+    }
     const mph = Math.round(Math.abs(s.speed) * 2.24);
     this.speed.innerHTML = `${mph}<small> mph</small>`;
     this.vehName.textContent = s.vehicleName || '';

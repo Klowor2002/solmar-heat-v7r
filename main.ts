@@ -36,6 +36,32 @@ function countFiles(dir) {
   return n;
 }
 
+function treeBytes(dir) {
+  let n = 0;
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    n += e.isDirectory() ? treeBytes(join(dir, e.name)) : statSync(join(dir, e.name)).size;
+  }
+  return n;
+}
+
+// The dossier builder refuses a game tree past the file-count or
+// byte caps, but its error names the cap, not the tree — by the
+// time it throws, the hand-in has already been copied and the
+// failure reads like a scorer problem. Measure the staged tree
+// here, where the numbers can be printed next to the caps they
+// broke, so an oversized entry fails as an authoring problem.
+function verifyGameCaps(dir) {
+  const files = countFiles(dir);
+  if (files > CAPS.game_max_files) {
+    throw new Error(`neon-run hand-in: game tree holds ${files} files, over the ${CAPS.game_max_files} cap`);
+  }
+  const bytes = treeBytes(dir);
+  if (bytes > CAPS.game_max_bytes) {
+    throw new Error(`neon-run hand-in: game tree is ${bytes} bytes, over the ${CAPS.game_max_bytes} cap`);
+  }
+  return files;
+}
+
 // Neon Run stages four scenes (cover, street, mission, city) and the
 // scorer replays them from shots.json; without the list, the entry
 // would read as a game with no evidence it ever ran. Check for it,
@@ -52,9 +78,13 @@ function requireComplete() {
   ];
   const missing = want.filter((rel) => !existsSync(join(root, rel)));
   if (missing.length) throw new Error(`neon-run hand-in incomplete, missing: ${missing.join(', ')}`);
-  // A frame over the 256 KiB cap fails the gate outright, and the
-  // failure only surfaces after grading starts — catch it here,
-  // where the fix is still just another capture round.
+  verifyScreenshotCaps(want);
+}
+
+// A frame over the 256 KiB cap fails the gate outright, and the
+// failure only surfaces after grading starts — catch it here,
+// where the fix is still just another capture round.
+function verifyScreenshotCaps(want) {
   for (const rel of want.filter((w) => w.startsWith('screenshots/'))) {
     const bytes = statSync(join(root, rel)).size;
     if (bytes > CAPS.screenshots.max_bytes) {
@@ -71,10 +101,11 @@ cpSync(join(root, 'game'), join(out, 'game'), { recursive: true });
 mkdirSync(join(out, 'screenshots'), { recursive: true });
 cpSync(join(root, 'screenshots'), join(out, 'screenshots'), { recursive: true });
 
+const gameFiles = verifyGameCaps(join(out, 'game'));
 const dossier = buildDossier(out, CAPS);
 writeFileSync(join(out, 'dossier.json'), dossier);
 
 console.log(
-  `solmar-heat neon-run: ${countFiles(join(out, 'game'))} game files, ` +
+  `solmar-heat neon-run: ${gameFiles} game files, ` +
   `${countFiles(join(out, 'screenshots'))} screenshots, dossier ${dossier.length} bytes`,
 );

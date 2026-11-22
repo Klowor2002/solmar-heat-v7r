@@ -10,6 +10,12 @@ import { makeCar, steerToward } from './vehicles.js';
 import { Ped } from './peds.js';
 import { ROADS } from './city.js';
 
+// Force size by wanted level, indexed by stars: cars answer first
+// (one star is a single interceptor), foot cops — the ones who can
+// actually fill the BUSTED meter — only join from two stars up.
+const CARS_BY_STAR = [0, 1, 2, 3, 3, 4];
+const COPS_BY_STAR = [0, 0, 1, 2, 3, 4];
+
 export class Police {
   constructor(scene, colliders) {
     this.scene = scene;
@@ -41,8 +47,20 @@ export class Police {
     this.busted01 = 0;
   }
 
-  desiredCars() { return [0, 1, 2, 3, 3, 4][this.wanted] || 0; }
-  desiredCops() { return [0, 0, 1, 2, 3, 4][this.wanted] || 0; }
+  desiredCars() { return CARS_BY_STAR[this.wanted] || 0; }
+  desiredCops() { return COPS_BY_STAR[this.wanted] || 0; }
+
+  // Drop units that drifted too far from the action (and wrecked
+  // cars) once the heat is off; while wanted, the chase keeps them.
+  trimFar(list, isCar, playerPos) {
+    for (let i = list.length - 1; i >= 0; i--) {
+      const u = list[i];
+      if (u.pos.distanceTo(playerPos) > 190 || (isCar && u.health <= 0)) {
+        this.scene.remove(u.mesh);
+        list.splice(i, 1);
+      }
+    }
+  }
 
   spawnCar(playerPos) {
     // enter from a road two blocks away, never in the player's face
@@ -74,16 +92,7 @@ export class Police {
       if (this.cops.length < this.desiredCops() && !playerInCar) this.spawnCop(playerPos);
     }
     // trim forces that drifted too far away
-    const trim = (list, isCar) => {
-      for (let i = list.length - 1; i >= 0; i--) {
-        const u = list[i];
-        if (u.pos.distanceTo(playerPos) > 190 || (isCar && u.health <= 0)) {
-          this.scene.remove(u.mesh);
-          list.splice(i, 1);
-        }
-      }
-    };
-    if (this.wanted === 0) { trim(this.cars, true); trim(this.cops, false); }
+    if (this.wanted === 0) { this.trimFar(this.cars, true, playerPos); this.trimFar(this.cops, false, playerPos); }
 
     let nearestCop = 999;
     let anySight = false;

@@ -246,6 +246,10 @@ document.getElementById('btn-how').addEventListener('click', () => {
 if (loadSave()) document.getElementById('btn-continue').style.display = '';
 
 // ------------------------------------------------------------ shot mode
+// A staged frame is declared ready after this many rendered frames:
+// long enough for traffic, crowds and the water shader to settle
+// into their seeded state, short enough to capture in seconds.
+const SHOT_READY_FRAMES = 50;
 let shotSpec = null;
 let shotFrames = 0;
 if (shotName) {
@@ -258,6 +262,15 @@ if (shotName) {
 }
 
 // ------------------------------------------------------------ helpers
+// One flash step of a cop lightbar, shared by the staged-shot loop
+// (police.js runs the same pattern live, off its own phase clock).
+function flashLightbar(car, on) {
+  const bar = car.mesh.getObjectByName('lightbar');
+  if (!bar) return;
+  bar.children[0].material.emissive.setHex(on ? 0xff2244 : 0x330008);
+  bar.children[1].material.emissive.setHex(on ? 0x330088 : 0x2266ff);
+}
+
 function zoneName(pos) {
   if (pos.x > 214) return 'SOLMAR PIER';
   if (pos.x > 182) return 'THE SHORE';
@@ -341,14 +354,7 @@ function frame() {
     const ctx = { playerPos: player.pos, roads: ROADS, colliders };
     for (const p of crowd) p.update(dt, ctx);
     effects.update(dt, elapsed);
-    for (const car of cars) {
-      const bar = car.mesh.getObjectByName('lightbar');
-      if (bar) {
-        const on = Math.sin(elapsed * 7) > 0;
-        bar.children[0].material.emissive.setHex(on ? 0xff2244 : 0x330008);
-        bar.children[1].material.emissive.setHex(on ? 0x330088 : 0x2266ff);
-      }
-    }
+    for (const car of cars) flashLightbar(car, Math.sin(elapsed * 7) > 0);
     camera.position.copy(shotSpec.camPos);
     camera.lookAt(shotSpec.lookAt);
     const h = shotSpec.hud;
@@ -360,7 +366,7 @@ function frame() {
     });
     renderer.render(scene, camera);
     shotFrames += 1;
-    if (shotFrames === 50) document.title = `SHOT-READY errors=${state.errors.length}`;
+    if (shotFrames === SHOT_READY_FRAMES) document.title = `SHOT-READY errors=${state.errors.length}`;
     return;
   }
 

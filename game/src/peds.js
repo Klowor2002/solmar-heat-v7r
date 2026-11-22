@@ -6,7 +6,7 @@
 // so the city never looks frozen.
 
 import * as THREE from 'three';
-import { collideCircle } from './city.js';
+import { collideCircle, ROADS } from './city.js';
 
 const SHIRTS = [0xd8546a, 0x4a90d8, 0xf2e3c9, 0x59c96e, 0xe8a33d, 0x9a6ae0, 0xe8e8f0, 0x3dc9c0];
 const PANTS = [0x23283e, 0x3d3d4a, 0x5a4632, 0x1d2f28, 0x6e2f3a];
@@ -143,7 +143,9 @@ export class Ped {
 export function spawnCrowd(scene, rng, count = 26) {
   const peds = [];
   for (let i = 0; i < count; i++) {
-    const rx = [-156, -104, -52, 0, 52, 104, 156][(rng() * 7) | 0];
+    // the crowd walks the same avenues the city builds — one list,
+    // so a road added to the grid grows pavements too
+    const rx = ROADS[(rng() * ROADS.length) | 0];
     const side = rng() < 0.5 ? -9.5 : 9.5;
     const along = -200 + rng() * 400;
     const p = rng() < 0.5 ? new Ped(scene, rx + side, along) : new Ped(scene, along, rx + side);

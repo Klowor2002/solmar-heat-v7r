@@ -77,6 +77,11 @@ export function buildCity(scene, rng) {
   const lineMat = new THREE.MeshBasicMaterial({ color: 0xd8c26a });
   const roadGeoV = new THREE.PlaneGeometry(ROAD_HALF * 2, 440);
   const roadGeoH = new THREE.PlaneGeometry(440, ROAD_HALF * 2);
+  // one geometry per dash orientation, shared by every dash mesh —
+  // a fresh PlaneGeometry per dash was hundreds of allocations for
+  // two shapes that never differ
+  const dashGeoV = new THREE.PlaneGeometry(0.5, 6);
+  const dashGeoH = new THREE.PlaneGeometry(6, 0.5);
   for (const r of ROADS) {
     const v = new THREE.Mesh(roadGeoV, roadMat);
     v.rotation.x = -Math.PI / 2; v.position.set(r, 0, 0); scene.add(v);
@@ -85,9 +90,9 @@ export function buildCity(scene, rng) {
     // dashed centre lines
     for (let d = -208; d <= 208; d += 16) {
       if (ROADS.some((o) => Math.abs(d - o) < 11)) continue;
-      const dv = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 6), lineMat);
+      const dv = new THREE.Mesh(dashGeoV, lineMat);
       dv.rotation.x = -Math.PI / 2; dv.position.set(r, 0.02, d); scene.add(dv);
-      const dh = new THREE.Mesh(new THREE.PlaneGeometry(6, 0.5), lineMat);
+      const dh = new THREE.Mesh(dashGeoH, lineMat);
       dh.rotation.x = -Math.PI / 2; dh.position.set(d, 0.02, r); scene.add(dh);
     }
   }
@@ -106,8 +111,9 @@ export function buildCity(scene, rng) {
   const pierMat = new THREE.MeshLambertMaterial({ color: 0x6e5136 });
   const pier = new THREE.Mesh(new THREE.BoxGeometry(58, 1.2, 26), pierMat);
   pier.position.set(226, 0.6, 0); scene.add(pier);
+  const postGeo = new THREE.CylinderGeometry(0.5, 0.5, 3);
   for (let px = 202; px <= 250; px += 12) for (const pz of [-11, 11]) {
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 3), pierMat);
+    const post = new THREE.Mesh(postGeo, pierMat);
     post.position.set(px, -0.6, pz); scene.add(post);
   }
   const kiosk = new THREE.Mesh(new THREE.BoxGeometry(6, 4, 6),
@@ -118,11 +124,13 @@ export function buildCity(scene, rng) {
   // palms along the shore
   const trunkMat = new THREE.MeshLambertMaterial({ color: 0x7a5c38 });
   const frondMat = new THREE.MeshLambertMaterial({ color: 0x2e7d4f });
+  const trunkGeo = new THREE.CylinderGeometry(0.3, 0.45, 7);
+  const frondGeo = new THREE.ConeGeometry(3.4, 1.6, 7);
   for (let z = -200; z <= 200; z += 26) {
     const px = 190 + rng() * 6;
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.45, 7), trunkMat);
+    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
     trunk.position.set(px, 3.5, z); trunk.rotation.z = 0.12; scene.add(trunk);
-    const fronds = new THREE.Mesh(new THREE.ConeGeometry(3.4, 1.6, 7), frondMat);
+    const fronds = new THREE.Mesh(frondGeo, frondMat);
     fronds.position.set(px + 0.8, 7.4, z); scene.add(fronds);
   }
 
@@ -249,11 +257,13 @@ export function buildCity(scene, rng) {
   // --- streetlights ----------------------------------------------------
   const lampMat = new THREE.MeshBasicMaterial({ color: 0xffe2a8 });
   const poleMat = new THREE.MeshLambertMaterial({ color: 0x30364a });
+  const poleGeo = new THREE.CylinderGeometry(0.12, 0.12, 6.4);
+  const lampGeo = new THREE.SphereGeometry(0.32, 6, 5);
   for (const rx of ROADS) for (const rz of ROADS) {
     for (const [ox, oz] of [[9, 9], [-9, -9], [9, -9], [-9, 9]]) {
-      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 6.4), poleMat);
+      const pole = new THREE.Mesh(poleGeo, poleMat);
       pole.position.set(rx + ox, 3.2, rz + oz); scene.add(pole);
-      const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.32, 6, 5), lampMat);
+      const lamp = new THREE.Mesh(lampGeo, lampMat);
       lamp.position.set(rx + ox, 6.5, rz + oz); scene.add(lamp);
     }
   }

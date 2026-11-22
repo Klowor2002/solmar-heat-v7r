@@ -131,17 +131,20 @@ export function steerToward(car, tx, tz, dt, colliders, cruise, boost = false) {
   while (diff < -Math.PI) diff += Math.PI * 2;
   const steer = Math.max(-1, Math.min(1, diff * 1.6));
   const throttle = dist > 4 ? 1 : 0.2;
-  const spec = CAR_SPECS[car.kind];
-  const savedTop = spec.top;
   const input = { throttle, steer, boost, brake: Math.abs(diff) > 2.4 && car.speed > 10 };
-  // temporarily cap by cruise by scaling throttle when above it
+  // the cruise cap is a throttle cut, not a top-speed change: above
+  // cruise the car coasts, and rolling resistance bleeds it back
+  // under — the shared CAR_SPECS table is never mutated per car
   if (car.speed > cruise) input.throttle = 0;
   const crashed = stepCar(car, input, dt, colliders);
-  spec.top = savedTop;
   return { dist, crashed };
 }
 
 // --- traffic ------------------------------------------------------------
+// Block pitch of the city grid: the lane glue below snaps cars to
+// the nearest road line, which only works in units of the pitch.
+const ROAD_SPACING = ROADS[1] - ROADS[0];
+
 export class Traffic {
   constructor(scene, rng, colliders, count = 15) {
     this.cars = [];
@@ -196,8 +199,8 @@ export class Traffic {
       }
       steerToward(car, tx, tz, dt, this.colliders, blocked ? 0 : car.cruise);
       // keep the car glued to its lane axis so drift never compounds
-      if (car.onX) car.pos.z += ((Math.round(car.pos.z / 52) * 52) + (car.dirSign > 0 ? 3.5 : -3.5) - car.pos.z) * Math.min(1, dt * 0.6);
-      else car.pos.x += ((Math.round(car.pos.x / 52) * 52) + (car.dirSign > 0 ? -3.5 : 3.5) - car.pos.x) * Math.min(1, dt * 0.6);
+      if (car.onX) car.pos.z += ((Math.round(car.pos.z / ROAD_SPACING) * ROAD_SPACING) + (car.dirSign > 0 ? 3.5 : -3.5) - car.pos.z) * Math.min(1, dt * 0.6);
+      else car.pos.x += ((Math.round(car.pos.x / ROAD_SPACING) * ROAD_SPACING) + (car.dirSign > 0 ? -3.5 : 3.5) - car.pos.x) * Math.min(1, dt * 0.6);
       // wrap at the shore / edges instead of leaving the world
       if (car.pos.x > 205) car.pos.x = -205; if (car.pos.x < -205) car.pos.x = 205;
       if (car.pos.z > 205) car.pos.z = -205; if (car.pos.z < -205) car.pos.z = 205;

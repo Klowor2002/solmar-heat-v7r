@@ -8,6 +8,13 @@
 
 import * as THREE from 'three';
 
+// The HUD state a staged frame poses with, in the shape main.js
+// feeds hud.update() — one constructor so all four scenes agree
+// on the field set even as their values differ.
+function hudSpec(wanted, speed, vehicleName, zone) {
+  return { wanted, speed, vehicleName, zone };
+}
+
 export function stageShot(game, name) {
   const L = game.landmarks;
   const P = game.player;
@@ -30,7 +37,7 @@ export function stageShot(game, name) {
       // cruisers stacked between camera and quarry down the avenue
       camPos: new THREE.Vector3(hero.pos.x - 6, 7.5, hero.pos.z + 24),
       lookAt: new THREE.Vector3(hero.pos.x, 0.8, hero.pos.z - 4),
-      hud: { wanted: 4, speed: 26, vehicleName: 'Comet GT', zone: 'CENTRAL AVENUE' },
+      hud: hudSpec(4, 26, 'Comet GT', 'CENTRAL AVENUE'),
       beam: null,
     };
   }
@@ -45,7 +52,7 @@ export function stageShot(game, name) {
     return {
       camPos: new THREE.Vector3(door.x - 13, 3.4, door.z + 17),
       lookAt: new THREE.Vector3(door.x + 2, 3.2, door.z - 6),
-      hud: { wanted: 0, speed: 0, vehicleName: '', zone: "MONA'S GARAGE" },
+      hud: hudSpec(0, 0, '', "MONA'S GARAGE"),
       beam: door,
       objective: { title: 'JOB 1 — FIRST WHEELS', text: 'Mona is waiting. Reach the beam to start.' },
     };
@@ -71,7 +78,7 @@ export function stageShot(game, name) {
     return {
       camPos: new THREE.Vector3(a.pos.x - 1.5, 2.5, -55),
       lookAt: new THREE.Vector3(a.pos.x + 0.5, 1.2, -79),
-      hud: { wanted: 1, speed: 0, vehicleName: '', zone: 'THE ALLEY OFF 5TH' },
+      hud: hudSpec(1, 0, '', 'THE ALLEY OFF 5TH'),
       beam: null,
       objective: { title: 'JOB 3 — ALLEY CATS', text: 'Clear the Vultures' },
     };
@@ -84,7 +91,7 @@ export function stageShot(game, name) {
   return {
     camPos: new THREE.Vector3(-96, 88, 168),
     lookAt: new THREE.Vector3(60, 0, -60),
-    hud: { wanted: 0, speed: 0, vehicleName: '', zone: 'SOLMAR CITY' },
+    hud: hudSpec(0, 0, '', 'SOLMAR CITY'),
     beam: null,
   };
 }

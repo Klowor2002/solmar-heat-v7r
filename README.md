@@ -31,6 +31,30 @@ npx tsx main.ts
 ```
 
 Then open the printed local URL in a browser. Progress saves automatically.
+To just play the game without the hand-in step, serve the static folder
+instead: `node serve.ts` and open <http://localhost:8080>.
+
+## Controls
+
+- **WASD / arrows** — drive, or walk on foot
+- **E** — enter and exit cars (taking a car is always stealing it)
+- **F** — fence a stolen car at the Chop Shop door
+- **Mouse** — aim on foot (click the canvas to pointer-lock); click to shoot
+- **Shift** — boost in a car, run on foot · **Space** — handbrake
+
+Follow the gold beam: it always points at the current objective — the next
+story job between jobs, and the active step's target during one.
+
+## How the hand-in works
+
+`main.ts` is the entry's hand-in program. It checks the entry is complete
+(every staged screenshot present and under the size cap, the game tree
+inside the file and byte caps), copies `game/` and `screenshots/` into the
+output directory, and writes `dossier.json` there with the kit's own
+`buildDossier` — so the dossier the scorer rebuilds is byte for byte the
+dossier handed in. The four screenshots are staged, not played: each is
+composed by `game/src/shots.js` from a `shots.json` scene at a fixed seed,
+which is what makes them reproducible.
 
 ## Entry
 

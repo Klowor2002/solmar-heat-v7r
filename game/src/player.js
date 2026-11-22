@@ -35,6 +35,11 @@ export class Player {
     this.walkPhase = 0;
     this.camPos = new THREE.Vector3(0, 6, 12);
     this.aiming = false;
+    // camera scratch: the chase rig recomputes its targets every
+    // frame, and lerp/lookAt read them synchronously — one reused
+    // pair of vectors instead of three allocations per frame
+    this._want = new THREE.Vector3();
+    this._camTarget = new THREE.Vector3();
   }
 
   get pos() { return this.car ? this.car.pos : this.mesh.position; }
@@ -94,7 +99,7 @@ export class Player {
       this.mesh.position.copy(this.car.pos);
       // chase camera settles behind the car
       const back = 10.5, up = 4.6;
-      const want = new THREE.Vector3(
+      const want = this._want.set(
         this.car.pos.x - Math.sin(this.car.heading) * back,
         up,
         this.car.pos.z - Math.cos(this.car.heading) * back);
@@ -148,7 +153,7 @@ export class Player {
     this.gun.visible = this.aiming;
 
     const back = 7.6;
-    const want = new THREE.Vector3(
+    const want = this._want.set(
       this.mesh.position.x - Math.sin(this.camYaw) * back * Math.cos(this.camPitch),
       1.7 + Math.sin(this.camPitch) * back,
       this.mesh.position.z - Math.cos(this.camYaw) * back * Math.cos(this.camPitch));
@@ -159,8 +164,8 @@ export class Player {
   applyCamera(camera) {
     camera.position.copy(this.camPos);
     const target = this.car
-      ? new THREE.Vector3(this.car.pos.x, 1.6, this.car.pos.z)
-      : new THREE.Vector3(this.mesh.position.x, 1.5, this.mesh.position.z);
+      ? this._camTarget.set(this.car.pos.x, 1.6, this.car.pos.z)
+      : this._camTarget.set(this.mesh.position.x, 1.5, this.mesh.position.z);
     camera.lookAt(target);
   }
 

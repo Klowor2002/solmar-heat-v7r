@@ -22,6 +22,8 @@ export class Effects {
     this.pVel = new Float32Array(this.maxP * 3);
     this.pLife = new Float32Array(this.maxP);
     this.pHead = 0;
+    this.pColDirty = false;   // colour attribute only changes on burst()
+    this._col = new THREE.Color();
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(this.pPos, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(this.pCol, 3));
@@ -60,7 +62,8 @@ export class Effects {
   }
 
   burst(pos, n, color, spread = 3, up = 3) {
-    const c = new THREE.Color(color);
+    const c = this._col.set(color);
+    this.pColDirty = true;
     for (let k = 0; k < n; k++) {
       const i = this.pHead; this.pHead = (this.pHead + 1) % this.maxP;
       this.pCol[i * 3] = c.r; this.pCol[i * 3 + 1] = c.g; this.pCol[i * 3 + 2] = c.b;
@@ -96,7 +99,12 @@ export class Effects {
       if (this.pLife[i] <= 0) this.pPos[i * 3 + 1] = -50;
     }
     this.points.geometry.attributes.position.needsUpdate = true;
-    this.points.geometry.attributes.color.needsUpdate = true;
+    // positions move every frame; colours only move when a burst
+    // writes them — skip the colour upload on quiet frames
+    if (this.pColDirty) {
+      this.points.geometry.attributes.color.needsUpdate = true;
+      this.pColDirty = false;
+    }
     for (const tr of this.tracers) {
       if (tr.life > 0) { tr.life -= dt; if (tr.life <= 0) tr.line.material.opacity = 0; }
     }

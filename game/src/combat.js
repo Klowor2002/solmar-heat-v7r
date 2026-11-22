@@ -13,6 +13,12 @@ import * as THREE from 'three';
 const GUN_RANGE = 90;
 const _dir = new THREE.Vector3();
 const _to = new THREE.Vector3();
+// Scratch for the shot solver: effects.tracer/burst copy the values
+// they are handed synchronously, so one reused set of vectors can
+// serve every shot without allocating a Vector3 per trigger pull.
+const _chest = new THREE.Vector3();
+const _end = new THREE.Vector3();
+const _muzzle = new THREE.Vector3();
 
 function rayHits(origin, dir, target, radius) {
   _to.copy(target).sub(origin);
@@ -54,21 +60,21 @@ export class Combat {
     let best = null, bestT = Infinity;
     for (const t of targets) {
       if (t.dead) continue;
-      const chest = new THREE.Vector3(t.pos.x, 1.25, t.pos.z);
-      const hit = rayHits(origin, dir, chest, 0.85);
+      _chest.set(t.pos.x, 1.25, t.pos.z);
+      const hit = rayHits(origin, dir, _chest, 0.85);
       if (hit > 0 && hit < bestT) { bestT = hit; best = t; }
     }
-    const end = best
-      ? new THREE.Vector3(best.pos.x, 1.25, best.pos.z)
-      : origin.clone().addScaledVector(dir, GUN_RANGE);
-    if (best && blockedByBuilding(origin, end, s.colliders)) best = null;
-    s.effects.tracer(origin.clone().add(new THREE.Vector3(0, -0.12, 0)), end);
+    if (best) _end.set(best.pos.x, 1.25, best.pos.z);
+    else _end.copy(origin).addScaledVector(dir, GUN_RANGE);
+    if (best && blockedByBuilding(origin, _end, s.colliders)) best = null;
+    _muzzle.copy(origin); _muzzle.y -= 0.12;
+    s.effects.tracer(_muzzle, _end);
     if (best) {
       const killed = best.hurt(34);
-      s.effects.burst(end, 7, 0xff5d5d, 2, 2);
+      s.effects.burst(_end, 7, 0xff5d5d, 2, 2);
       if (killed) s.onKill?.(best);
     } else {
-      s.effects.burst(end, 2, 0xd8d8e0, 1, 1);
+      s.effects.burst(_end, 2, 0xd8d8e0, 1, 1);
     }
     return true;
   }

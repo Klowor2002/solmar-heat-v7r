@@ -19,6 +19,16 @@ export const TOKEN_SPOTS = [
 
 const V3 = (x, z) => new THREE.Vector3(x, 0, z);
 
+// The harbour loop, shared by the Harbour Heat story race and the
+// pier time trial — one course, so a time set in one means the
+// same thing in the other.
+const HARBOUR_LOOP = [[156, 52], [104, 104], [52, 52], [52, 0], [104, -52], [156, -104]];
+
+// What the Chop Shop pays per kind. Kinds it will not touch at all
+// are worth the generic fallback at the call site, same as kinds
+// it has never heard of.
+const FENCE_VALUES = { sport: 300, sedan: 150, hatch: 110, limo: 420, taxi: 130, van: 350, cop: 0 };
+
 export class Director {
   constructor(game) {
     this.game = game;
@@ -93,7 +103,7 @@ export class Director {
       { title: 'Harbour Heat', from: 'Felix', start: L.pier.door, reward: 500,
         intro: 'Rico, a rival crew runs the harbour loop at dusk. Beat their car home.',
         steps: [
-          { kind: 'race', points: [[156, 52], [104, 104], [52, 52], [52, 0], [104, -52], [156, -104]],
+          { kind: 'race', points: HARBOUR_LOOP,
             rivalPace: 15.2, label: 'Win the harbour loop' },
         ] },
       { title: 'High Roller', from: 'Felix', start: L.tower.door, reward: 700,
@@ -275,7 +285,7 @@ export class Director {
       g.toast('COURIER RUN', `Parcel waits at the marker — deliver to ${offer.dest.name}`);
     } else if (offer.kind === 'race') {
       this.sideJob = { kind: 'race', phase: 'run', pay: 200, time: 125,
-        points: [[156, 52], [104, 104], [52, 52], [52, 0], [104, -52], [156, -104]].map(([x, z]) => V3(x, z)), idx: 0 };
+        points: HARBOUR_LOOP.map(([x, z]) => V3(x, z)), idx: 0 };
       g.toast('TIME TRIAL', 'Beat 2:05 around the harbour loop');
     }
   }
@@ -347,7 +357,7 @@ export class Director {
     if (pCar && pCar.stolen && pCar.pos.distanceTo(this.L.chopshop.door) < 9) {
       this.fencePrompt = true;
       if (input.fence) {
-        const value = { sport: 300, sedan: 150, hatch: 110, limo: 420, taxi: 130, van: 350, cop: 0 }[pCar.kind] || 120;
+        const value = FENCE_VALUES[pCar.kind] || 120;
         if (value > 0) {
           g.exitCar();
           g.removeCar(pCar);

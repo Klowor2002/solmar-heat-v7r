@@ -24,7 +24,17 @@ export class AudioBench {
     const ctx = this.ctx = new AC();
     this.master = ctx.createGain();
     this.master.gain.value = 0.5;
-    this.master.connect(ctx.destination);
+    // A compressor as the last stage: engine, siren, gunshots and a
+    // mission sting can all land on the same frame, and summed raw
+    // they clip into a crackle. Glue them under a high threshold
+    // instead — quiet material passes untouched, peaks get caught.
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -14;
+    limiter.knee.value = 18;
+    limiter.ratio.value = 12;
+    limiter.attack.value = 0.003;
+    limiter.release.value = 0.24;
+    this.master.connect(limiter).connect(ctx.destination);
 
     // Engine: a detuned saw pair through a lowpass, gain tied to speed.
     this.engineOsc = ctx.createOscillator();
@@ -109,4 +119,12 @@ export class AudioBench {
   }
 
   cash() { this.blip(1320, 0.07, 0.10); setTimeout(() => this.blip(1760, 0.1, 0.10), 60); }
+
+  // Ramp, never cut: a hard gain step clicks. Muting keeps the
+  // engine and siren voices running silently, so unmuting does not
+  // restart the graph or lose the siren's flip phase.
+  setMuted(muted) {
+    if (!this.ctx) return;
+    this.master.gain.setTargetAtTime(muted ? 0 : 0.5, this.ctx.currentTime, 0.03);
+  }
 }
